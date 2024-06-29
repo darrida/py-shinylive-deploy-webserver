@@ -1,0 +1,39 @@
+[project]
+name = "shinylive_deloy_webserver"
+version = "2024.6.29"
+authors = [
+  {name="darrida", email="darrida.py@gmail.com"}
+]
+description = "Example for non-standard py-shinylive deployments"
+readme = "README.md"
+
+dependencies = [
+  'shiny',
+  'pydantic < 2.0',
+]
+
+[project.optional-dependencies]
+tests = [
+  'fastapi',
+  'loguru',
+  'pyfetch_mimic == 2024.06.14',
+  'httpx',
+  'shinylive',
+  'shinyswatch',
+]
+
+[project.urls]
+Homepage = "https://github.com/darrida/py-shinylive-deploy-webserver"
+Issues = "https://github.com/darrida/py-shinylive-deploy-webserver/issues"
+
+[tool.shinylive_pscp_deploy]
+app_name = "app1"
+dev_dir = "src_dev/app1"
+staging_dir = "staging"
+target_dir = "/homes/user/docker_volumes/shinyapps/"
+host = "testserver"
+user = "testuser"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
