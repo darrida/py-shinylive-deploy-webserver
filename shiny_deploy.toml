@@ -2,7 +2,7 @@
 app_name = "app1"
 
 [development]
-directory = "src_dev"
+directory = "src_dev/app1"
 
 [deploy.gitbranch]
 prod = "main"
@@ -16,7 +16,8 @@ directory = "src_test_webserver/shinyapps/"
 base_url = "localhost:8000/apps"
 
 [deploy.server]
-host = "testserver"
-user = "testuser"
-directory = "/homes/user/docker_volumes/shinyapps/"
-base_url = "https://realurl.com/apps"
+host = "127.0.0.1"
+user = "shinylive"
+port = 2222
+directory = "shinyapps"
+base_url = "http://localhost:5000/"

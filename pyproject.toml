@@ -26,22 +26,6 @@ tests = [
 Homepage = "https://github.com/darrida/py-shinylive-deploy-webserver"
 Issues = "https://github.com/darrida/py-shinylive-deploy-webserver/issues"
 
-[tool.shinylive_deploy]
-app_name = "app1"
-dev_dir = "src_dev/app1"
-deploy_branch = "main"
-beta_branch = "main"
-host = "testserver"
-user = "testuser"
-
-[tool.shinylive_deploy.local]
-deploy_dir = "src_test_webserver/shinyapps/"
-base_url = "localhost:8000/apps"
-
-[tool.shinylive_deploy.webserver]
-deploy_dir = "/homes/user/docker_volumes/shinyapps/"
-base_url = "https://realurl.com/apps"
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
