@@ -1,12 +1,11 @@
 import subprocess
-import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 from pydantic import SecretStr
 
-from .base import ShinyDeploy
+from .base import ShinyDeploy, DeployException
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
@@ -25,38 +24,39 @@ class ServerShinyDeploy(ShinyDeploy):
     def deploy(self, testing: bool = False):
         if not all([self.host, self.user, self.password]):
             raise ValueError("For ServerShinyDeploy, all of the following are required: host, user, password")
-        self._check_requirements()
+        self._check_git_requirements()
         self._message()
         self._compile()
 
         with SSHClient() as ssh:
-            ssh = self.__ssh_connection(ssh)
+            ssh = self._ssh_connection(ssh)
             sftp = ssh.open_sftp()
 
-            has_backup = self.__manage_backup(sftp)
+            has_backup = self._manage_backup(sftp)
             if has_backup is None:
                 return
             
-            self.__push_app(sftp, testing)
+            self._push_app(sftp, testing)
 
         print(
             "\nCOMPLETE:"
             f"\n- `{self.app_name}` compiled and deployed to webserver as `{self.deploy_name}`"
             f"\n- App available at {self.base_url}/{self.deploy_name}"
-            f"\n- Backup available at {self.base_url}/{self.deploy_name}-backup" if has_backup is True else ""
         )
+        if has_backup is True:
+            print(f"\n- Backup available at {self.base_url}/{self.deploy_name}-backup")
 
     def rollback(self):
-        self._check_requirements()
+        self._check_git_requirements()
         deployment_dir = PurePosixPath(self.dir_deployment) / self.deploy_name
 
         with SSHClient() as ssh:
-            ssh = self.__ssh_connection(ssh)
+            ssh = self._ssh_connection(ssh)
             sftp = ssh.open_sftp()
-            if not self.__deployed_dir_exists(sftp):
+            if not self._deployed_dir_exists(sftp):
                 print("\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n")
                 return
-            if not self.__backup_dir_exists(sftp):
+            if not self._backup_dir_exists(sftp):
                 print("\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n")
                 return
             
@@ -71,37 +71,43 @@ class ServerShinyDeploy(ShinyDeploy):
             f"\n- Available at {self.base_url}/{self.deploy_name}"
         )
 
-    def __ssh_connection(self, client: SSHClient) -> SSHClient:
+    def _ssh_connection(self, client: SSHClient) -> SSHClient:
         client.set_missing_host_key_policy(AutoAddPolicy())
         client.connect(
-            hostname=self.host, port=self.port, username=self.user, password=self.password.get_secret_value()
+            hostname=self.host, port=self.port, username=self.user, password=self.password.get_secret_value(), look_for_keys=False
         )
         return client
 
-    def __deployed_dir_exists(self, sftp: SFTPClient):
+    def _deployed_dir_exists(self, sftp: SFTPClient):
         directories = sftp.listdir(str(self.dir_deployment))
         if self.deploy_name in directories:
             return True
         return False
     
-    def __backup_dir_exists(self, sftp: SFTPClient):
+    def _backup_dir_exists(self, sftp: SFTPClient):
         directories = sftp.listdir(str(self.dir_deployment))
         if f"{self.deploy_name}-backup" in directories:
             return True
         return False
     
-    def __manage_backup(self, sftp: SFTPClient):
+    def _confirm_depoy_dir_exists(self, sftp: SFTPClient):
+        directories = sftp.listdir()
+        if str(self.dir_deployment) not in directories:
+            raise DeployException(f"ACTION REQUIRED`{self.dir_deployment}` not found in the ssh target for user `{self.user}`. Create this directory, owned by this user, then try again.")
+    def _manage_backup(self, sftp: SFTPClient):
+        self._confirm_depoy_dir_exists(sftp)
+
         deployment_filepath = PurePosixPath(self.dir_deployment) / self.deploy_name
         print(deployment_filepath)
-        if self.__deployed_dir_exists(sftp):
-            if self.__backup_dir_exists(sftp):
+        if self._deployed_dir_exists(sftp):
+            if self._backup_dir_exists(sftp):
                 print("\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying.\n")
                 return None
             sftp.rename(str(deployment_filepath), f"{deployment_filepath}-backup")
             return True
         return False
     
-    def __push_app(self, sftp: SFTPClient, testing: bool = False):
+    def _push_app(self, sftp: SFTPClient, testing: bool = False):
         staging_filepath = Path(self.dir_staging) / self.deploy_name
 
         sftp.mkdir(str(PurePosixPath(self.dir_deployment) / self.deploy_name))

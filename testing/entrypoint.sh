@@ -1,5 +1,4 @@
 #!/bin/bash
-cat /etc/ssh/ssh_config
 
 # Start the first process
 echo "Starting SSH and python webserver..."

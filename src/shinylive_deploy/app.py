@@ -3,13 +3,13 @@ from getpass import getpass
 from pathlib import Path
 
 from pydantic import SecretStr
-from shinylive_deploy.data import create_config_file
 from shinylive_deploy.models import LocalShinyDeploy, ServerShinyDeploy, toml
 
 
 def main():
     config_file = Path.cwd() / "shinylive_deploy.toml"
     if not config_file.exists():
+        from shinylive_deploy.data import create_config_file
         create_config_file()
         return
 
@@ -22,9 +22,11 @@ def main():
         shinylive_.deploy()
 
 
-def _parse_arguments() -> tuple[str, bool]:
+def _parse_arguments(test_argvs: list = None) -> tuple[str, bool]:
+    if test_argvs:
+        sys.argv = test_argvs
     if len(sys.argv) < 2 or sys.argv[1] not in ("test", "beta", "prod", "local"):
-            raise ValueError("\nERROR: One of the following arguments is required -> [ local | test | beta | prod ]\n")
+        raise ValueError("\nERROR: One of the following arguments is required -> [ local | test | beta | prod ]\n")
     deploy_mode = sys.argv[1]
     try:
         rollback = sys.argv[2]
@@ -36,7 +38,7 @@ def _parse_arguments() -> tuple[str, bool]:
     return deploy_mode, rollback
 
 
-def _initialize_configuration(deploy_mode: str):
+def _initialize_configuration(deploy_mode: str) -> LocalShinyDeploy | ServerShinyDeploy:
     if deploy_mode in ("test", "beta", "prod"):
         config = toml["deploy"]["server"]
         return ServerShinyDeploy(

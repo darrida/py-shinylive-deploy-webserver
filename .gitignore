@@ -2,6 +2,7 @@
 shinylive/
 shinyapps/*
 # shinyapps/
+.DS_store
 
 .vscode/
 

@@ -9,16 +9,20 @@ readme = "README.md"
 
 dependencies = [
   'shiny',
+  'shinylive',
+  'gitpython',
+  'paramiko',
   'pydantic < 2.0',
 ]
 
 [project.optional-dependencies]
 tests = [
   'fastapi',
+  'pytest',
   'loguru',
   'pyfetch_mimic == 2024.06.14',
   'httpx',
-  'shinylive',
+  'pytest',
   'shinyswatch',
 ]
 
