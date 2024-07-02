@@ -1,3 +1,8 @@
+from pathlib import Path
+
+
+def create_config_file():
+    text = """
 [general]
 app_name = "app1"
 
@@ -21,3 +26,8 @@ user = "shinylive"
 port = 2222
 directory = "shinyapps"
 base_url = "http://localhost:5000"
+"""
+
+    with open(Path.cwd() / "shinylive_deploy.toml", "w") as f:
+        f.write(text)
+    

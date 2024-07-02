@@ -1,11 +1,28 @@
 import sys
 from getpass import getpass
+from pathlib import Path
 
-from models import LocalShinyDeploy, ServerShinyDeploy, toml
 from pydantic import SecretStr
+from shinylive_deploy.data import create_config_file
+from shinylive_deploy.models import LocalShinyDeploy, ServerShinyDeploy, toml
 
-if __name__ == "__main__":
-    # parse arguments
+
+def main():
+    config_file = Path.cwd() / "shinylive_deploy.toml"
+    if not config_file.exists():
+        create_config_file()
+        return
+
+    mode, rollback = _parse_arguments()
+    shinylive_ = _initialize_configuration(mode)
+    
+    if rollback is True:
+        shinylive_.rollback()
+    else:
+        shinylive_.deploy()
+
+
+def _parse_arguments() -> tuple[str, bool]:
     if len(sys.argv) < 2 or sys.argv[1] not in ("test", "beta", "prod", "local"):
             raise ValueError("\nERROR: One of the following arguments is required -> [ local | test | beta | prod ]\n")
     deploy_mode = sys.argv[1]
@@ -16,11 +33,13 @@ if __name__ == "__main__":
         rollback = True
     except IndexError:
         rollback = False
+    return deploy_mode, rollback
 
-    # initialize configuration
+
+def _initialize_configuration(deploy_mode: str):
     if deploy_mode in ("test", "beta", "prod"):
         config = toml["deploy"]["server"]
-        shinylive_ = ServerShinyDeploy(
+        return ServerShinyDeploy(
             mode=deploy_mode,
             base_url=config["base_url"],
             dir_deployment=config["directory"],
@@ -31,14 +50,12 @@ if __name__ == "__main__":
         )
     else:  # local
         config = toml["deploy"]["local"]
-        shinylive_ = LocalShinyDeploy(
+        return LocalShinyDeploy(
             mode=deploy_mode,
             base_url=config["base_url"],
             dir_deployment=config["directory"]
         )
-        
-    # execute deployment change
-    if rollback is True:
-        shinylive_.rollback()
-    else:
-        shinylive_.deploy()
+
+
+if __name__ == "__main__":
+    main()
