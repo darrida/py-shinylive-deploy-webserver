@@ -4,7 +4,7 @@ version = "2024.7.1"
 authors = [
   {name="darrida", email="darrida.py@gmail.com"}
 ]
-description = "Example for non-standard py-shinylive deployments"
+description = "CLI utility to help deploy py-shinylive apps to hosted webservers via SSH."
 readme = "README.md"
 
 dependencies = [
@@ -36,3 +36,15 @@ Issues = "https://github.com/darrida/py-shinylive-deploy-webserver/issues"
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+extend-exclude = [".venv", "*.robot"]
+
+[tool.ruff.lint]
+extend-select = ["S", "I"]  # bandit (S), isort (I)
+
+[tool.ruff.lint.isort]
+extra-standard-library = []
+known-first-party = []
+known-third-party = []
