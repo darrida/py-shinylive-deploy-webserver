@@ -2,7 +2,7 @@
 app_name = "app1"
 
 [development]
-directory = "src_dev/app1"
+directory = "src/app1"
 
 [deploy.gitbranch]
 prod = "main"
@@ -12,7 +12,7 @@ beta = "main"
 directory = "staging"
 
 [deploy.local]
-directory = "src_test_webserver/shinyapps/"
+directory = "test_webserver/shinyapps/"
 base_url = "localhost:8000/apps"
 
 [deploy.server]

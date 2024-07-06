@@ -47,16 +47,18 @@ class LocalShinyDeploy(ShinyDeploy):
         )
 
     def _deployed_dir_exists(self):
-        result = subprocess.run(f"ls {self.dir_deployment}", **subprocess_config)
-        directories = result.stdout.split("\n")
-        if Path(self.deploy_name).name in directories:
+        deploy_dirs = [x.name for x in Path(self.dir_deployment).iterdir()]
+        # result = subprocess.run(f"ls {self.dir_deployment}", **subprocess_config)
+        # directories = result.stdout.split("\n")
+        if Path(self.deploy_name).name in deploy_dirs:
             return True
         return False
     
     def _backup_dir_exists(self):
-        result = subprocess.run(f"ls {self.dir_deployment}", **subprocess_config)
-        directories = result.stdout.split("\n")
-        if Path(f"{self.deploy_name}-backup").name in directories:
+        deploy_dirs = [x.name for x in Path(self.dir_deployment).iterdir()]
+        # result = subprocess.run(f"ls {self.dir_deployment}", **subprocess_config)
+        # directories = result.stdout.split("\n")
+        if Path(f"{self.deploy_name}-backup").name in deploy_dirs:
             return True
         return False
     
