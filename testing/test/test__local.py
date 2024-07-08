@@ -1,9 +1,9 @@
+# ruff: noqa: S101
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
-from shinylive_deploy.app import _initialize_configuration, _parse_arguments
+from shinylive_deploy.app import _initialize_configuration
 
 deployment_stopped_msg = ">>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying."
 
@@ -19,8 +19,10 @@ def reset_local_dirs(recreate: bool):
     deploy_dir.mkdir()
     staging_dir.mkdir()
 
-    with open(deploy_dir / ".gitkeep", "w") as f: f.write("")
-    with open(staging_dir / ".gitkeep", "w") as f: f.write("")
+    with open(deploy_dir / ".gitkeep", "w") as f: 
+        f.write("")
+    with open(staging_dir / ".gitkeep", "w") as f: 
+        f.write("")
 
 @pytest.fixture()
 def dirs_session():
@@ -29,11 +31,10 @@ def dirs_session():
     reset_local_dirs(recreate=False)
 
 def test_deploy_local(capfd, dirs_session):
-    mode, rollback = _parse_arguments(["", "local"])
+    mode = "local"
     shinylive_ = _initialize_configuration(mode)
     shinylive_.deploy()
     out, _ = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: local" in out
     assert "DEPLOYMENT NAME: app1" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -53,12 +54,11 @@ def test_deploy_local(capfd, dirs_session):
 
 
 def test_deploy_local_create_backup(capfd, dirs_session):
-    mode, rollback = _parse_arguments(["", "local"])
+    mode = "local"
     shinylive_ = _initialize_configuration(mode)
     shinylive_.deploy()
     shinylive_.deploy()
     out, _ = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: local" in out
     assert "DEPLOYMENT NAME: app1" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -81,7 +81,7 @@ def test_deploy_local_create_backup(capfd, dirs_session):
     assert Path(deploy_dir / "app1-backup" / "app.json").exists() is True
 
 def test_deploy_local_blocked(capfd, dirs_session):
-    mode, rollback = _parse_arguments(["", "local"])
+    mode = "local"
     shinylive_ = _initialize_configuration(mode)
     shinylive_.deploy()
     out, _ = capfd.readouterr()
@@ -95,7 +95,6 @@ def test_deploy_local_blocked(capfd, dirs_session):
     out, _ = capfd.readouterr()
     # confirm blocked message IS displayed
     assert deployment_stopped_msg in out
-    assert rollback is False
     staging_dir = Path(__file__).parent.parent / "staging" / "app1"
     assert staging_dir.exists() is True
     assert deployment_stopped_msg in out

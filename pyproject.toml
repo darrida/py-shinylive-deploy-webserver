@@ -27,7 +27,7 @@ tests = [
 ]
 
 [project.scripts]
-shinylive_deploy = "shinylive_deploy.app:main"
+shinylive_deploy = "shinylive_deploy.app:cli"
 
 [project.urls]
 Homepage = "https://github.com/darrida/py-shinylive-deploy-webserver"

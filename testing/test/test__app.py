@@ -1,45 +1,8 @@
-import re
-
+# ruff: noqa: S101
 import pytest
 from pydantic import SecretStr
-from shinylive_deploy.app import _initialize_configuration, _parse_arguments
+from shinylive_deploy.app import _initialize_configuration
 
-
-def test_parse_argements_local(capfd):
-    deploy_mode, rollback = _parse_arguments(["", "local"])
-    assert deploy_mode == "local"
-    assert rollback is False
-
-def test_parse_argements_prod(capfd):
-    deploy_mode, rollback = _parse_arguments(["", "prod"])
-    assert deploy_mode == "prod"
-    assert rollback is False
-
-def test_parse_argements_test(capfd):
-    deploy_mode, rollback = _parse_arguments(["", "test"])
-    assert deploy_mode == "test"
-    assert rollback is False
-
-def test_parse_argements_beta(capfd):
-    deploy_mode, rollback = _parse_arguments(["", "beta"])
-    assert deploy_mode == "beta"
-    assert rollback is False
-
-def test_parse_argements_rollback_and_r(capfd):
-    deploy_mode, rollback = _parse_arguments(["", "local", "--rollback"])
-    assert deploy_mode == "local"
-    assert rollback is True
-    deploy_mode, rollback = _parse_arguments(["", "local", "-r"])
-    assert deploy_mode == "local"
-    assert rollback is True
-
-def test_parse_argements_invalid_mode(capfd):
-    with pytest.raises(ValueError, match=re.escape("\nERROR: One of the following arguments is required -> [ local | test | beta | prod ]\n")):
-        _parse_arguments(["", "super"])
-
-def test_parse_argements_invalid_rollback(capfd):
-    with pytest.raises(ValueError, match=re.escape("2nd optional argument must be `-r` or `--rollback`")):
-        _parse_arguments(["", "local", "rollback"])
 
 def test_initalize_config_local():
     config = _initialize_configuration("local")

@@ -1,3 +1,4 @@
+# ruff: noqa: S602
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -5,7 +6,7 @@ from pathlib import Path, PurePosixPath
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 from pydantic import SecretStr
 
-from .base import ShinyDeploy, DeployException
+from .base import DeployException, ShinyDeploy
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
@@ -44,7 +45,7 @@ class ServerShinyDeploy(ShinyDeploy):
             f"\n- App available at {self.base_url}/{self.deploy_name}"
         )
         if has_backup is True:
-            print(f"\n- Backup available at {self.base_url}/{self.deploy_name}-backup")
+            print(f"- Backup available at {self.base_url}/{self.deploy_name}-backup")
 
     def rollback(self):
         self._check_git_requirements()

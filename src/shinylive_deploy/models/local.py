@@ -1,3 +1,4 @@
+# ruff: noqa: S602 S603
 import subprocess
 from pathlib import Path
 
@@ -24,7 +25,7 @@ class LocalShinyDeploy(ShinyDeploy):
             f"\n- Available at {self.base_url}/{self.deploy_name}"
         )
         if has_backup:
-            print(f"\n- Backup available at {self.base_url}/{self.deploy_name}-backup")
+            print(f"- Backup available at {self.base_url}/{self.deploy_name}-backup")
 
     def rollback(self):
         self._check_git_requirements()

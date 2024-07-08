@@ -1,3 +1,4 @@
+# ruff: noqa: S101 S603 S607
 import re
 import shutil
 import subprocess

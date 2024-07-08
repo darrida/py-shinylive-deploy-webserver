@@ -1,3 +1,4 @@
+# ruff: noqa: S602
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
