@@ -2,12 +2,12 @@
 from pathlib import Path
 
 import tomllib
-from shinylive_deploy.data import create_config_file
+from shinylive_deploy.config import create_config
 
 
 # TESTS
 def test_create_config_file():
-    create_config_file()
+    create_config()
     with open(Path.cwd() / "shinylive_deploy.toml", 'rb') as f:
         toml = tomllib.load(f)
     assert toml["general"]["app_name"] == "app1"

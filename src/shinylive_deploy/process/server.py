@@ -72,6 +72,36 @@ class ServerShinyDeploy(ShinyDeploy):
             f"\n- Available at {self.base_url}/{self.deploy_name}"
         )
 
+    def clean_rollback(self):
+        self._check_git_requirements()
+        deployment_dir = PurePosixPath(self.dir_deployment) / self.deploy_name
+
+        with SSHClient() as ssh:
+            ssh = self._ssh_connection(ssh)
+            sftp = ssh.open_sftp()
+            if not self._backup_dir_exists(sftp):
+                print("\n>>> WARNING <<<: Backback STOPPED. No backup directory exists to remove.\n")
+                return
+            
+            ssh.exec_command(f"rm -rf {deployment_dir}-backup")
+            print(f"\nRemoved `{deployment_dir}-backup`")
+            print("\nROLLBACK CLEANUP COMPLETE")
+
+    def remove(self):
+        self._check_git_requirements()
+        deployment_dir = PurePosixPath(self.dir_deployment) / self.deploy_name
+
+        with SSHClient() as ssh:
+            ssh = self._ssh_connection(ssh)
+            sftp = ssh.open_sftp()
+            if not self._deployed_dir_exists(sftp):
+                print("\n>>> WARNING <<<: App removal STOPPED. No app directory exists to remove.\n")
+                return
+            
+            ssh.exec_command(f"rm -rf {deployment_dir}")
+            print(f"\nRemoved `{deployment_dir}`")
+            print("\nAPPLICATION REMOVAL COMPLETE")
+
     def _ssh_connection(self, client: SSHClient) -> SSHClient:
         client.set_missing_host_key_policy(AutoAddPolicy())
         client.connect(
@@ -102,7 +132,11 @@ class ServerShinyDeploy(ShinyDeploy):
         print(deployment_filepath)
         if self._deployed_dir_exists(sftp):
             if self._backup_dir_exists(sftp):
-                print("\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying.\n")
+                print(
+                    "\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. "
+                    "Delete current backup directory using `shinylive_deploy <mode> --clean-rollback`, "
+                    "or rollback before redeploying using `shinylive_deploy <mode> --rollback`.\n"
+                )
                 return None
             sftp.rename(str(deployment_filepath), f"{deployment_filepath}-backup")
             return True

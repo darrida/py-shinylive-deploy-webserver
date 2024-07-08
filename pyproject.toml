@@ -1,6 +1,6 @@
 [project]
 name = "shinylive-deploy"
-version = "2024.7.1"
+version = "2024.7.8"
 authors = [
   {name="darrida", email="darrida.py@gmail.com"}
 ]

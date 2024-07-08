@@ -5,39 +5,25 @@ from pathlib import Path
 from typing import Literal
 
 import git
-import tomllib
-
-filepath = Path.cwd() / "shinylive_deploy.toml"
-if not filepath.exists():
-    from shinylive_deploy.data import create_config_file
-    create_config_file()
-
-with open("shinylive_deploy.toml", "rb") as f:
-    toml = tomllib.load(f)
-
-deploy_local = toml["deploy"]["local"]
-deploy_server = toml["deploy"]["server"]
-development: dict = toml.get("development", {})
-staging: dict = toml["deploy"].get("staging", {})
-gitbranch: dict = toml["deploy"].get("gitbranch", {})
+from shinylive_deploy.config import config
 
 
 @dataclass
 class ShinyDeploy:
     base_url: str = None
-    app_name: str = toml["general"]["app_name"]
+    app_name: str = config.app_name
     dir_deployment: str = None
-    dir_development: str = development.get("directory", "src")
-    dir_staging: str = staging.get("directory", "staging")
-    prod_branch: str = gitbranch.get("prod", "main")
-    beta_branch: str = gitbranch.get("beta", "main")
+    dir_development: str = config.development.get("directory", "src")
+    dir_staging: str = config.staging.get("directory", "staging")
+    prod_branch: str = config.gitbranch.get("prod", "main")
+    beta_branch: str = config.gitbranch.get("beta", "main")
     mode: Literal["local", "test", "beta", "prod"] = None
 
     @property
     def deploy_name(self):
         modes = {"prod": "", "beta": "-beta", "test": "-test", "local": ""}
         return self.app_name + modes[self.mode]
-    
+
     def _message(self):
         print(
             "\n##################################"

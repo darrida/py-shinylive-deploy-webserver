@@ -3,11 +3,16 @@ import shutil
 from pathlib import Path
 
 import pytest
-from shinylive_deploy.app import _initialize_configuration
+from shinylive_deploy.process import initialize
 
-deployment_stopped_msg = ">>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying."
+deployment_stopped_msg = (
+    ">>> WARNING <<<: Deployment STOPPED. Backup directory already exists. "
+    "Delete current backup directory using `shinylive_deploy <mode> --clean-rollback`, "
+    "or rollback before redeploying using `shinylive_deploy <mode> --rollback`."
+)
 
-def reset_local_dirs(recreate: bool):
+
+def reset_local_dirs():
     deploy_dir = Path(__file__).parent.parent / "src_test_webserver" / "shinyapps"
     staging_dir = Path(__file__).parent.parent / "staging"
 
@@ -19,20 +24,22 @@ def reset_local_dirs(recreate: bool):
     deploy_dir.mkdir()
     staging_dir.mkdir()
 
-    with open(deploy_dir / ".gitkeep", "w") as f: 
-        f.write("")
-    with open(staging_dir / ".gitkeep", "w") as f: 
-        f.write("")
+    with open(deploy_dir / ".gitignore", "w") as f: 
+        f.write("*\n!.gitignore")
+    with open(staging_dir / ".gitignore", "w") as f: 
+        f.write("*\n!.gitignore")
+
 
 @pytest.fixture()
 def dirs_session():
-    reset_local_dirs(recreate=True)
+    reset_local_dirs()
     yield
-    reset_local_dirs(recreate=False)
+    reset_local_dirs()
+
 
 def test_deploy_local(capfd, dirs_session):
     mode = "local"
-    shinylive_ = _initialize_configuration(mode)
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, _ = capfd.readouterr()
     assert "DEPLOYMENT MODE: local" in out
@@ -55,7 +62,7 @@ def test_deploy_local(capfd, dirs_session):
 
 def test_deploy_local_create_backup(capfd, dirs_session):
     mode = "local"
-    shinylive_ = _initialize_configuration(mode)
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     shinylive_.deploy()
     out, _ = capfd.readouterr()
@@ -80,9 +87,10 @@ def test_deploy_local_create_backup(capfd, dirs_session):
     assert Path(deploy_dir / "app1-backup").exists() is True
     assert Path(deploy_dir / "app1-backup" / "app.json").exists() is True
 
+
 def test_deploy_local_blocked(capfd, dirs_session):
     mode = "local"
-    shinylive_ = _initialize_configuration(mode)
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, _ = capfd.readouterr()
     # confirm blocked message NOT displayed
@@ -98,3 +106,65 @@ def test_deploy_local_blocked(capfd, dirs_session):
     staging_dir = Path(__file__).parent.parent / "staging" / "app1"
     assert staging_dir.exists() is True
     assert deployment_stopped_msg in out
+
+
+def test_deploy_local_rollback(capfd, dirs_session):
+    mode = "local"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    out, _ = capfd.readouterr()
+    # confirm blocked message NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, _ = capfd.readouterr()
+    # confirm blocked message IS displayed
+    assert deployment_stopped_msg in out
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+
+
+def test_deploy_local_rollback_no_deployment(capfd, dirs_session):
+    mode = "local"
+    shinylive_ = initialize(mode)
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n\n." != out
+
+
+def test_deploy_local_rollback_no_backup(capfd, dirs_session):
+    mode = "local"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_local_remove(capfd, dirs_session):
+    mode = "local"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "Removed `app1`"
+    assert "APPLICATION REMOVAL COMPLETE" in out
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_local_remove_no_app(capfd, dirs_session):
+    mode = "local"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert ">>> WARNING <<<: App removal STOPPED. No app directory exists to remove." != out

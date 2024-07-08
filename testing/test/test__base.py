@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from shinylive_deploy.models.base import DeployException, ShinyDeploy
+from shinylive_deploy.process.base import DeployException, ShinyDeploy
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 

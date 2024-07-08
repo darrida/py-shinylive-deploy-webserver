@@ -31,7 +31,7 @@ class LocalShinyDeploy(ShinyDeploy):
         self._check_git_requirements()
         existing_deploy_dir = Path(self.dir_deployment) / self.deploy_name
         if not self._deployed_dir_exists():
-            print("\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n")
+            print("\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback to.\n")
             return
         if not self._backup_dir_exists():
             print("\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n")
@@ -46,6 +46,27 @@ class LocalShinyDeploy(ShinyDeploy):
             f"\n- Application `{self.app_name}` rolled back locally as `{self.deploy_name}`"
             f"\n- Available at {self.base_url}/{self.deploy_name}"
         )
+
+    def clean_rollback(self):
+        self._check_git_requirements()
+        existing_deploy_dir = Path(self.dir_deployment) / self.deploy_name
+        if not self._backup_dir_exists():
+            print("\n>>> WARNING <<<: Rollback cleanup STOPPED. No backup directory exists to remove.\n")
+            return
+        subprocess.run(f"rm -r {existing_deploy_dir}-backup", **subprocess_config)
+        print(f"\nRemoved `{self.base_url}/{self.deploy_name}-backup`")
+        print("\nROLLBACK CLEANUP COMPLETE")
+
+    def remove(self):
+        self._check_git_requirements()
+        self._check_git_requirements()
+        existing_deploy_dir = Path(self.dir_deployment) / self.deploy_name
+        if not self._deployed_dir_exists():
+            print("\n>>> WARNING <<<: App removal STOPPED. No app directory exists to remove.\n")
+            return
+        subprocess.run(f"rm -r {existing_deploy_dir}", **subprocess_config)
+        print(f"\nRemoved `{self.deploy_name}`")
+        print("\nAPPLICATION REMOVAL COMPLETE")
 
     def _deployed_dir_exists(self):
         deploy_dirs = [x.name for x in Path(self.dir_deployment).iterdir()]
@@ -67,7 +88,11 @@ class LocalShinyDeploy(ShinyDeploy):
         existing_deploy_dir = Path(self.dir_deployment) / self.deploy_name
         if self._deployed_dir_exists():
             if self._backup_dir_exists():
-                print("\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying.\n")
+                print(
+                    "\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. "
+                    "Delete current backup directory using `shinylive_deploy <mode> --clean-rollback`, "
+                    "or rollback before redeploying using `shinylive_deploy <mode> --rollback`.\n"
+                )
                 return None
             subprocess.run(f"mv {existing_deploy_dir} {existing_deploy_dir}-backup", shell=True)
             return True
