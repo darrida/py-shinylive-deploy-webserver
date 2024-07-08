@@ -1,10 +1,12 @@
+# ruff: noqa: S603 S607
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
-from shinylive_deploy.data import create_config_file
+from shinylive_deploy.config import create_config
 
-create_config_file()
+create_config()
 
 def pytest_sessionstart(session):
     """Execute before all tests"""

@@ -1,3 +1,4 @@
+# ruff: noqa: S602
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -5,7 +6,7 @@ from pathlib import Path, PurePosixPath
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 from pydantic import SecretStr
 
-from .base import ShinyDeploy, DeployException
+from .base import DeployException, ShinyDeploy
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
@@ -44,7 +45,7 @@ class ServerShinyDeploy(ShinyDeploy):
             f"\n- App available at {self.base_url}/{self.deploy_name}"
         )
         if has_backup is True:
-            print(f"\n- Backup available at {self.base_url}/{self.deploy_name}-backup")
+            print(f"- Backup available at {self.base_url}/{self.deploy_name}-backup")
 
     def rollback(self):
         self._check_git_requirements()
@@ -70,6 +71,36 @@ class ServerShinyDeploy(ShinyDeploy):
             f"\n- App name: `{self.app_name}`"
             f"\n- Available at {self.base_url}/{self.deploy_name}"
         )
+
+    def clean_rollback(self):
+        self._check_git_requirements()
+        deployment_dir = PurePosixPath(self.dir_deployment) / self.deploy_name
+
+        with SSHClient() as ssh:
+            ssh = self._ssh_connection(ssh)
+            sftp = ssh.open_sftp()
+            if not self._backup_dir_exists(sftp):
+                print("\n>>> WARNING <<<: Backback STOPPED. No backup directory exists to remove.\n")
+                return
+            
+            ssh.exec_command(f"rm -rf {deployment_dir}-backup")
+            print(f"\nRemoved `{deployment_dir}-backup`")
+            print("\nROLLBACK CLEANUP COMPLETE")
+
+    def remove(self):
+        self._check_git_requirements()
+        deployment_dir = PurePosixPath(self.dir_deployment) / self.deploy_name
+
+        with SSHClient() as ssh:
+            ssh = self._ssh_connection(ssh)
+            sftp = ssh.open_sftp()
+            if not self._deployed_dir_exists(sftp):
+                print("\n>>> WARNING <<<: App removal STOPPED. No app directory exists to remove.\n")
+                return
+            
+            ssh.exec_command(f"rm -rf {deployment_dir}")
+            print(f"\nRemoved `{deployment_dir}`")
+            print("\nAPPLICATION REMOVAL COMPLETE")
 
     def _ssh_connection(self, client: SSHClient) -> SSHClient:
         client.set_missing_host_key_policy(AutoAddPolicy())
@@ -101,7 +132,11 @@ class ServerShinyDeploy(ShinyDeploy):
         print(deployment_filepath)
         if self._deployed_dir_exists(sftp):
             if self._backup_dir_exists(sftp):
-                print("\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying.\n")
+                print(
+                    "\n>>> WARNING <<<: Deployment STOPPED. Backup directory already exists. "
+                    "Delete current backup directory using `shinylive_deploy <mode> --clean-rollback`, "
+                    "or rollback before redeploying using `shinylive_deploy <mode> --rollback`.\n"
+                )
                 return None
             sftp.rename(str(deployment_filepath), f"{deployment_filepath}-backup")
             return True

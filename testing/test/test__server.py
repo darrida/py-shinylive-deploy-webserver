@@ -1,15 +1,16 @@
+# ruff: noqa: S101
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
 from paramiko import SFTPClient, SSHClient
-from shinylive_deploy.app import (
-    _initialize_configuration,
-    _parse_arguments,
-)
+from shinylive_deploy.app import initialize
 
-deployment_stopped_msg = ">>> WARNING <<<: Deployment STOPPED. Backup directory already exists. Delete backup directory, or rollback before redeploying."
+deployment_stopped_msg = (
+    ">>> WARNING <<<: Deployment STOPPED. Backup directory already exists. "
+    "Delete current backup directory using `shinylive_deploy <mode> --clean-rollback`, "
+    "or rollback before redeploying using `shinylive_deploy <mode> --rollback`."
+)
 
 
 def reset_ssh_dirs(ssh: SSHClient, sftp: SFTPClient):
@@ -23,15 +24,16 @@ def reset_ssh_dirs(ssh: SSHClient, sftp: SFTPClient):
     if staging_dir.exists():
         shutil.rmtree(staging_dir.resolve())
     staging_dir.mkdir()
-    with open(staging_dir / ".gitkeep", "w") as f: f.write("")
+    with open(staging_dir / ".gitignore", "w") as f: 
+        f.write("*\n!.gitignore")
 
 
 @pytest.fixture()
 def sftp_session(monkeypatch):
     """temporarily patches the object in the test context"""
-    monkeypatch.setattr('shinylive_deploy.app.getpass', lambda _: "docker")
+    monkeypatch.setattr('shinylive_deploy.process.getpass', lambda _: "docker")
 
-    shinylive_ = _initialize_configuration("test")
+    shinylive_ = initialize("test")
     with SSHClient() as ssh:
         ssh = shinylive_._ssh_connection(ssh)
         sftp = ssh.open_sftp()
@@ -41,11 +43,10 @@ def sftp_session(monkeypatch):
 
 
 def test_deploy_test(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "test"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "test"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: test" in out
     assert "DEPLOYMENT NAME: app1-test" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -65,13 +66,13 @@ def test_deploy_test(capfd, sftp_session):
     assert "app1-test" in directories
     assert "app1-test-backup" not in directories
 
+
 def test_deploy_test_create_backup(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "test"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "test"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: test" in out
     assert "DEPLOYMENT NAME: app1-test" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -91,9 +92,10 @@ def test_deploy_test_create_backup(capfd, sftp_session):
     assert "app1-test" in directories
     assert "app1-test-backup" in directories
 
+
 def test_deploy_test_blocked(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "test"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "test"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
     # confirm blocked message NOT displayed
@@ -106,17 +108,78 @@ def test_deploy_test_blocked(capfd, sftp_session):
     out, err = capfd.readouterr()
     # confirm blocked message IS displayed
     assert deployment_stopped_msg in out
-    assert rollback is False
     staging_dir = Path(__file__).parent.parent / "staging" / "app1-test"
     assert staging_dir.exists() is True
     assert deployment_stopped_msg in out
 
-def test_deploy_prod(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "prod"])
-    shinylive_ = _initialize_configuration(mode)
+
+def test_deploy_test_rollback(capfd, sftp_session):
+    mode = "test"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
+    # confirm blocked message NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message IS displayed
+    assert deployment_stopped_msg in out
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+
+
+def test_deploy_test_rollback_no_deployment(capfd, sftp_session):
+    mode = "test"
+    shinylive_ = initialize(mode)
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n\n." != out
+
+
+def test_deploy_test_rollback_no_backup(capfd, sftp_session):
+    mode = "test"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_test_remove(capfd, sftp_session):
+    mode = "test"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "Removed `app1-test`"
+    assert "APPLICATION REMOVAL COMPLETE" in out
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_test_remove_no_app(capfd, sftp_session):
+    mode = "test"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert ">>> WARNING <<<: App removal STOPPED. No app directory exists to remove." != out
+
+
+def test_deploy_prod(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
     assert "DEPLOYMENT MODE: prod" in out
     assert "DEPLOYMENT NAME: app1" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -136,13 +199,13 @@ def test_deploy_prod(capfd, sftp_session):
     assert "app1" in directories
     assert "app1-backup" not in directories
 
+
 def test_deploy_prod_create_backup(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "prod"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "prod"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: prod" in out
     assert "DEPLOYMENT NAME: app1" in out
     assert "Export Command: shinylive export src staging/app1" in out
@@ -163,8 +226,8 @@ def test_deploy_prod_create_backup(capfd, sftp_session):
     assert "app1-backup" in directories
 
 def test_deploy_prod_blocked(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "prod"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "prod"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
     # confirm blocked message NOT displayed
@@ -177,17 +240,78 @@ def test_deploy_prod_blocked(capfd, sftp_session):
     out, err = capfd.readouterr()
     # confirm blocked message IS displayed
     assert deployment_stopped_msg in out
-    assert rollback is False
     staging_dir = Path(__file__).parent.parent / "staging" / "app1"
     assert staging_dir.exists() is True
     assert deployment_stopped_msg in out
 
-def test_deploy_beta(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "beta"])
-    shinylive_ = _initialize_configuration(mode)
+
+def test_deploy_prod_rollback(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
+    # confirm blocked message NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message IS displayed
+    assert deployment_stopped_msg in out
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+
+
+def test_deploy_prod_rollback_no_deployment(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n\n." != out
+
+
+def test_deploy_prod_rollback_no_backup(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_prod_remove(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "Removed `app1`"
+    assert "APPLICATION REMOVAL COMPLETE" in out
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_prod_remove_no_app(capfd, sftp_session):
+    mode = "prod"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert ">>> WARNING <<<: App removal STOPPED. No app directory exists to remove." != out
+
+
+def test_deploy_beta(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
     assert "DEPLOYMENT MODE: beta" in out
     assert "DEPLOYMENT NAME: app1-beta" in out
     assert "Export Command: shinylive export src staging/app1-beta" in out
@@ -207,13 +331,13 @@ def test_deploy_beta(capfd, sftp_session):
     assert "app1-beta" in directories
     assert "app1-beta-backup" not in directories
 
+
 def test_deploy_beta_create_backup(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "beta"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "beta"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     shinylive_.deploy()
     out, err = capfd.readouterr()
-    assert rollback is False
     assert "DEPLOYMENT MODE: beta" in out
     assert "DEPLOYMENT NAME: app1" in out
     assert "Export Command: shinylive export src staging/app1-beta" in out
@@ -233,9 +357,10 @@ def test_deploy_beta_create_backup(capfd, sftp_session):
     assert "app1-beta" in directories
     assert "app1-beta-backup" in directories
 
+
 def test_deploy_beta_blocked(capfd, sftp_session):
-    mode, rollback = _parse_arguments(["", "beta"])
-    shinylive_ = _initialize_configuration(mode)
+    mode = "beta"
+    shinylive_ = initialize(mode)
     shinylive_.deploy()
     out, err = capfd.readouterr()
     # confirm blocked message NOT displayed
@@ -248,7 +373,68 @@ def test_deploy_beta_blocked(capfd, sftp_session):
     out, err = capfd.readouterr()
     # confirm blocked message IS displayed
     assert deployment_stopped_msg in out
-    assert rollback is False
     staging_dir = Path(__file__).parent.parent / "staging" / "app1-beta"
     assert staging_dir.exists() is True
     assert deployment_stopped_msg in out
+
+
+def test_deploy_beta_rollback(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+    shinylive_.deploy()
+    out, err = capfd.readouterr()
+    # confirm blocked message IS displayed
+    assert deployment_stopped_msg in out
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert deployment_stopped_msg not in out
+
+
+def test_deploy_beta_rollback_no_deployment(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No app directory exists to rollback from.\n\n." != out
+
+
+def test_deploy_beta_rollback_no_backup(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.rollback()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_beta_remove(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert "Removed `app1-beta`"
+    assert "APPLICATION REMOVAL COMPLETE" in out
+    assert "\n>>> WARNING <<<: Backback STOPPED. No backup directory exists for rollback.\n\n." != out
+
+
+def test_deploy_beta_remove_no_app(capfd, sftp_session):
+    mode = "beta"
+    shinylive_ = initialize(mode)
+    shinylive_.deploy()
+    shinylive_.remove()
+    out, _ = capfd.readouterr()
+    # confirm blocked message still NOT displayed
+    assert ">>> WARNING <<<: App removal STOPPED. No app directory exists to remove." != out
