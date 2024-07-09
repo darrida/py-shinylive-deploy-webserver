@@ -1,16 +1,27 @@
 # ruff: noqa: S602 S603
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from .base import ShinyDeploy
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
+@dataclass
 class LocalShinyDeploy(ShinyDeploy):
+    staging_only: bool = False
+
     def deploy(self):
         self._check_git_requirements()
         self._message()
         self._compile()
+
+        if self.staging_only in ("true", True):
+            print(
+                "\nCOMPLETE:"
+                "\n- deployed to 'staging' folder only."
+                "\n- To test: `python -m http.server -d staging --bind localhost 8008`")
+            return
 
         has_backup = self._manage_backup()
         if has_backup is None:

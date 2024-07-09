@@ -1,6 +1,6 @@
 [project]
 name = "shinylive-deploy"
-version = "2024.7.7"
+version = "2024.7.9"
 authors = [
   {name="darrida", email="darrida.py@gmail.com"}
 ]
@@ -28,6 +28,7 @@ tests = [
 
 [project.scripts]
 shinylive_deploy = "shinylive_deploy.app:cli"
+shinylive-manage = "shinylive_deploy.app:cli"
 
 [project.urls]
 Homepage = "https://github.com/darrida/py-shinylive-deploy-webserver"

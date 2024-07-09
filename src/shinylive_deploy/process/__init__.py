@@ -31,5 +31,6 @@ def initialize(deploy_mode: str) -> LocalShinyDeploy | ServerShinyDeploy:
         return LocalShinyDeploy(
             mode=deploy_mode,
             base_url=config["base_url"],
-            dir_deployment=config["directory"]
+            dir_deployment=config["directory"],
+            staging_only=config.get("staging_only", False)
         )

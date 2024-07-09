@@ -21,6 +21,7 @@ beta = "main"
 directory = "staging"
 
 [deploy.local]
+staging_only = false
 directory = "src_test_webserver/shinyapps/"
 base_url = "http://localhost:8000/apps"
 
