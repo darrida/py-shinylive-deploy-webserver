@@ -34,7 +34,7 @@ def reset_local_dirs():
 def dirs_session():
     reset_local_dirs()
     yield
-    # reset_local_dirs()
+    reset_local_dirs()
 
 
 def test_deploy_local(capfd, dirs_session):
