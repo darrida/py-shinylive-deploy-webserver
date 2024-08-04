@@ -7,7 +7,7 @@ echo "Starting SSH and python webserver..."
 
 # Start the second process
 # echo "Starting webserver..."
-python3 -m http.server --directory shinyapps 5000
+python3 -m http.server --directory shinyapps 5001
 
 # Wait for any process to exit
 wait -n

@@ -18,7 +18,7 @@ WORKDIR /home/shinylive
 RUN     mkdir /home/shinylive/shinyapps
 
 USER root
-EXPOSE  5000
+EXPOSE  5001
 EXPOSE  22
 
 COPY entrypoint.sh .
