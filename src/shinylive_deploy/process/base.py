@@ -1,6 +1,7 @@
-# ruff: noqa: S602
+import re
 import subprocess
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 from typing import Literal
 
@@ -46,7 +47,37 @@ class ShinyDeploy:
             with open(".gitkeep", "w") as f: f.write("")
         cmd = f"shinylive export {Path(self.dir_development)} {Path(self.dir_staging) / self.deploy_name}"
         print(f"\nExport Command: {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=True, check=True)  # noqa: S602
+
+
+class WindowsPaths:
+    @staticmethod
+    def workaround(app_js_path: Path):
+        # app_file = Path(self.dir_staging) / self.deploy_name / "app.js"
+        with open(app_js_path) as f:
+            text = f.read()
+
+        if path_fix_required := WindowsPaths.__find_impacted(text):
+            WindowsPaths.__fix_impacted(text, path_fix_required)
+            with open(app_js_path, "w") as f:
+                f.write(text)
+            print(f"Windows only step: fixed module paths in `{app_js_path}`")
+
+    @staticmethod
+    def __find_impacted(app_js_text: str) -> list[str]:
+            matches = re.findall(r'("name": "\S*.py", "content":)', app_js_text)
+            return [x for x in matches if "\\" in x]
+        
+    @staticmethod
+    def __fix_impacted(app_js_text: str, py_module_paths: list[str]):
+        def fix_path_slashes(match_obj):
+            return re.sub(r"\\\\", "/", match_obj.group(1))
+        
+        for m in py_module_paths:
+            logger = getLogger()
+            logger.debug(">", m.replace('"name": "', "").replace('", "content":', ""))
+        return re.sub(r'("name": "\S*.py", "content":)', fix_path_slashes, app_js_text)
+
 
 
 class DeployException(Exception):
