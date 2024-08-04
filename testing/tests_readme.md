@@ -13,7 +13,7 @@ source .venv/bin/activate  # Linux/MacOS
 - ***MUST*** being run from inside `testing` directory
 ```shell
 docker build . -t shinylive-test
-docker run --rm -p 2222:22 -p 5000:5000 shinylive-test
+docker run --rm -p 2222:22 -p 5001:5001 shinylive-test
 ```
 - A new terminal/powershell window will need to be opened for the steps below
 
@@ -22,14 +22,14 @@ docker run --rm -p 2222:22 -p 5000:5000 shinylive-test
 - ***MUST*** being run from inside `testing` directory
 ```shell
 git init .  # <- this creates a .git session with `testing`; gets removed when unitests run
-shinylive_deploy test
+shinylive-manage deploy test
 ```
 - Input password when prompted: docker
 - Accept key if when prompted
   - If continued issues with the key are encountered:
     - `ssh shinylive@127.0.0.1 -p 2222` | password: `docker`
     - Accept key when prompted
-    - Try `shinylive_deploy test` again
+    - Try `shinylive-manage deploy test` again
 
 ## FINALLY, run unit tests
 ```shell
