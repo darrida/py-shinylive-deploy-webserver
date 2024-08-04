@@ -1,9 +1,10 @@
 # ruff: noqa: S602 S603
+import platform
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .base import ShinyDeploy
+from .base import ShinyDeploy, WindowsPaths
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
@@ -15,6 +16,9 @@ class LocalShinyDeploy(ShinyDeploy):
         self._check_git_requirements()
         self._message()
         self._compile()
+        if platform.system() == 'Windows':
+            app_js_path = Path(self.dir_staging) / self.deploy_name / "app.js"
+            WindowsPaths.workaround(app_js_path)
 
         if self.staging_only in ("true", True):
             print(

@@ -1,4 +1,4 @@
-# ruff: noqa: S602
+import platform
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 from pydantic import SecretStr
 
-from .base import DeployException, ShinyDeploy
+from .base import DeployException, ShinyDeploy, WindowsPaths
 
 subprocess_config = {"capture_output": True, "text": True, "shell": True, "check": True}
 
@@ -28,6 +28,9 @@ class ServerShinyDeploy(ShinyDeploy):
         self._check_git_requirements()
         self._message()
         self._compile()
+        if platform.system() == 'Windows':
+            app_js_path = Path(self.dir_staging) / self.deploy_name / "app.js"
+            WindowsPaths.workaround(app_js_path)
 
         with SSHClient() as ssh:
             ssh = self._ssh_connection(ssh)
@@ -150,4 +153,4 @@ class ServerShinyDeploy(ShinyDeploy):
         print(f"PSCP Command: {cmd}")
         if testing:
             return
-        subprocess.run(cmd.replace("<PASSWORD>", self.password.get_secret_value()), shell=True, check=True)
+        subprocess.run(cmd.replace("<PASSWORD>", self.password.get_secret_value()), shell=True, check=True)  # noqa: S602
