@@ -57,19 +57,19 @@ class WindowsPaths:
         with open(app_js_path) as f:
             text = f.read()
 
-        if path_fix_required := WindowsPaths.__find_impacted(text):
-            WindowsPaths.__fix_impacted(text, path_fix_required)
+        if path_fix_required := WindowsPaths._find_impacted(text):
+            text = WindowsPaths._fix_impacted(text, path_fix_required)
             with open(app_js_path, "w") as f:
                 f.write(text)
             print(f"Windows only step: fixed module paths in `{app_js_path}`")
 
     @staticmethod
-    def __find_impacted(app_js_text: str) -> list[str]:
+    def _find_impacted(app_js_text: str) -> list[str]:
             matches = re.findall(r'("name": "\S*.py", "content":)', app_js_text)
             return [x for x in matches if "\\" in x]
         
     @staticmethod
-    def __fix_impacted(app_js_text: str, py_module_paths: list[str]):
+    def _fix_impacted(app_js_text: str, py_module_paths: list[str]):
         def fix_path_slashes(match_obj):
             return re.sub(r"\\\\", "/", match_obj.group(1))
         
