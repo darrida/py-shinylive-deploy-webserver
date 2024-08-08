@@ -29,7 +29,7 @@ class ServerShinyDeploy(ShinyDeploy):
         self._message()
         self._compile()
         if platform.system() == 'Windows':
-            app_js_path = Path(self.dir_staging) / self.deploy_name / "app.js"
+            app_js_path = Path(self.dir_staging) / self.deploy_name / "app.json"
             WindowsPaths.workaround(app_js_path)
 
         with SSHClient() as ssh:
